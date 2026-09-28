@@ -1,0 +1,50 @@
+# Image credits
+
+All product and editorial photographs are from **[Pexels](https://www.pexels.com)** and are used under the
+[Pexels License](https://www.pexels.com/license/) (free to use, no attribution required — credited here anyway).
+Images were downloaded once, resized and converted to WebP (700 px and 1400 px widths) and are served locally from `/images/`. Nothing is hotlinked.
+
+Tanah Studio is a fictional brand. Product names, descriptions and prices are invented for this demo; the photos show similar real-world items, not actual Tanah products.
+
+| File (public/images/…) | Photographer | Pexels page |
+|---|---|---|
+| `dune-mug-1-{700,1400}.webp` | [KATRIN BOLOVTSOVA](https://www.pexels.com/@ekaterina-bolovtsova/) | [Ceramic Mugs on a Wooden Tray](https://www.pexels.com/photo/ceramic-mugs-on-a-wooden-tray-6312194/) |
+| `dune-mug-2-{700,1400}.webp` | [KATRIN BOLOVTSOVA](https://www.pexels.com/@ekaterina-bolovtsova/) | [Plain White Mugs on a White Surface](https://www.pexels.com/photo/plain-white-mugs-on-a-white-surface-6312177/) |
+| `dune-mug-3-{700,1400}.webp` | [KATRIN BOLOVTSOVA](https://www.pexels.com/@ekaterina-bolovtsova/) | [Two Metal Mugs](https://www.pexels.com/photo/two-metal-mugs-6312276/) |
+| `ember-espresso-1-{700,1400}.webp` | [Iulian Sandu](https://www.pexels.com/@iulian-sandu-294198313/) | [Minimalist Ceramic Coffee Cups on Table](https://www.pexels.com/photo/minimalist-ceramic-coffee-cups-on-table-33074061/) |
+| `ember-espresso-2-{700,1400}.webp` | [Iulian Sandu](https://www.pexels.com/@iulian-sandu-294198313/) | [Minimalist Espresso Cups on Neutral Surface](https://www.pexels.com/photo/minimalist-espresso-cups-on-neutral-surface-33074054/) |
+| `merapi-tumbler-1-{700,1400}.webp` | [Mathias Reding](https://www.pexels.com/@matreding/) | [Artisanal Ceramic Mugs on Wooden Table in Amsterdam](https://www.pexels.com/photo/artisanal-ceramic-mugs-on-wooden-table-in-amsterdam-31452624/) |
+| `sabana-cup-honey-{700,1400}.webp` | [Arda Kaykısız](https://www.pexels.com/@arda-kaykisiz-672105204/) | [Cup of Coffee on Tray on Table](https://www.pexels.com/photo/cup-of-coffee-on-tray-on-table-19873648/) |
+| `sabana-cup-cobalt-{700,1400}.webp` | [Pixabay](https://www.pexels.com/@pixabay/) | [Cup of Coffee on Saucer](https://www.pexels.com/photo/cup-of-coffee-on-saucer-459489/) |
+| `arc-dripper-1-{700,1400}.webp` | [Darina Belonogova](https://www.pexels.com/@darina-belonogova/) | [A Hand Pouring Hot Water on a Cup](https://www.pexels.com/photo/a-hand-pouring-hot-water-on-a-cup-8004596/) |
+| `arc-dripper-2-{700,1400}.webp` | [Cihan Yüce](https://www.pexels.com/@cihanyuce/) | [Overhead Shot of Coffee Being Filtered](https://www.pexels.com/photo/overhead-shot-of-coffee-being-filtered-9784908/) |
+| `slow-pour-kettle-1-{700,1400}.webp` | [Jill Qin](https://www.pexels.com/@jill-qin-151629290/) | [Milk Thermometer in a Cup](https://www.pexels.com/photo/milk-thermometer-in-a-cup-12100693/) |
+| `slow-pour-kettle-2-{700,1400}.webp` | [Michael Burrows](https://www.pexels.com/@michael-burrows/) | [Unrecognizable person brewing aromatic pour over coffee in garden](https://www.pexels.com/photo/unrecognizable-person-brewing-aromatic-pour-over-coffee-in-garden-7125644/) |
+| `clear-server-1-{700,1400}.webp` | [Israyosoy S.](https://www.pexels.com/@israyosoy/) | [Minimalist Glass Coffee Carafe on Wooden Table](https://www.pexels.com/photo/minimalist-glass-coffee-carafe-on-wooden-table-29520966/) |
+| `clear-server-2-{700,1400}.webp` | [Dicky Agustian](https://www.pexels.com/@dickydikiw/) | [Minimalist Coffee Carafe on Light Surface](https://www.pexels.com/photo/minimalist-coffee-carafe-on-light-surface-32972535/) |
+| `flores-bajawa-1-{700,1400}.webp` | [Cup of Couple](https://www.pexels.com/@cup-of-couple/) | [A Bag of Coffee Beans](https://www.pexels.com/photo/a-bag-of-coffee-beans-7657837/) |
+| `flores-bajawa-2-{700,1400}.webp` | [Boryslav Shoot](https://www.pexels.com/@boryslav/) | [Close-up of Brown Coffee Beans](https://www.pexels.com/photo/close-up-of-brown-coffee-beans-12165304/) |
+| `java-frinsa-1-{700,1400}.webp` | [Bia Sousa](https://www.pexels.com/@biasousa/) | [Coffee Beans in Bag](https://www.pexels.com/photo/coffee-beans-in-bag-22679454/) |
+| `java-frinsa-2-{700,1400}.webp` | [Tiberiu](https://www.pexels.com/@tubusan/) | [Spilled Coffee Beans](https://www.pexels.com/photo/spilled-coffee-beans-5943975/) |
+| `kawi-plate-1-{700,1400}.webp` | [Yan Krukau](https://www.pexels.com/@yankrukov/) | [Close-Up Shot of White Clay Plates](https://www.pexels.com/photo/close-up-shot-of-white-clay-plates-6611494/) |
+| `kawi-plate-2-{700,1400}.webp` | [Yan Krukau](https://www.pexels.com/@yankrukov/) | [Close-Up Shot of White Clay Plates](https://www.pexels.com/photo/close-up-shot-of-white-clay-plates-6611496/) |
+| `nest-bowls-1-{700,1400}.webp` | [ready made](https://www.pexels.com/@readymade/) | [Colorful Ceramic Plates and Bowls](https://www.pexels.com/photo/colorful-ceramic-plates-and-bowls-3847437/) |
+| `nest-bowls-2-{700,1400}.webp` | [ready made](https://www.pexels.com/@readymade/) | [Colorful Dishware](https://www.pexels.com/photo/colorful-dishware-3847451/) |
+| `laut-bowl-1-{700,1400}.webp` | [Georgie Devlin](https://www.pexels.com/@gstudio/) | [Empty Blue Ceramic Bowls](https://www.pexels.com/photo/empty-blue-ceramic-bowls-11691548/) |
+| `hearth-teapot-oat-{700,1400}.webp` | [Jakob Welik](https://www.pexels.com/@jakob-welik-216202436/) | [Pot and Scattered Herbs](https://www.pexels.com/photo/pot-and-scattered-herbs-11849904/) |
+| `hearth-teapot-white-{700,1400}.webp` | [Rodrigo Ortega](https://www.pexels.com/@rodrigo-ortega-2044210904/) | [Minimalist White Ceramic Teapot on Counter](https://www.pexels.com/photo/minimalist-white-ceramic-teapot-on-counter-31940584/) |
+| `pebble-vase-1-{700,1400}.webp` | [Tara Winstead](https://www.pexels.com/@tara-winstead/) | [A Beige Pot on a Beige Background](https://www.pexels.com/photo/a-beige-pot-on-a-beige-background-7663201/) |
+| `ridge-vase-1-{700,1400}.webp` | [Ivan S](https://www.pexels.com/@ivan-s/) | [Ceramic Vases on a White Surface](https://www.pexels.com/photo/ceramic-vases-on-a-white-surface-7119222/) |
+| `twin-vases-1-{700,1400}.webp` | [Vinícius Borralho](https://www.pexels.com/@vinicius-borralho-1386263608/) | [Minimalist Ceramic Vases on Wooden Tray](https://www.pexels.com/photo/minimalist-ceramic-vases-on-wooden-tray-33126633/) |
+| `hero-shelf-{700,1400}.webp` | [Oleg Prachuk](https://www.pexels.com/@olegprachuk/) | [Ceramic Dishes on Shelf](https://www.pexels.com/photo/ceramic-dishes-on-shelf-15440777/) |
+| `story-studio-{700,1400}.webp` | [KoolShooters](https://www.pexels.com/@koolshooters/) | [Woman Molding Clay on a Pottery Wheel](https://www.pexels.com/photo/woman-molding-clay-on-a-pottery-wheel-9736289/) |
+| `story-hands-{700,1400}.webp` | [Antoni Shkraba](https://www.pexels.com/@shkrabaanthony/) | [Close-Up Shot of a Person Molding a Clay Pot](https://www.pexels.com/photo/close-up-shot-of-a-person-molding-a-clay-pot-4706109/) |
+| `story-wheel-{700,1400}.webp` | [Yan Krukau](https://www.pexels.com/@yankrukov/) | [Close-Up Photo of a Man Forming a Shape from Clay](https://www.pexels.com/photo/close-up-photo-of-a-man-forming-a-shape-from-clay-6611352/) |
+| `cat-cups-{700,1400}.webp` | [Esra Koçyiğit](https://www.pexels.com/@esra-kocyigit-42710429/) | [Cups and Paint Brushes with Assorted Paints on a White Table](https://www.pexels.com/photo/cups-and-paint-brushes-with-assorted-paints-on-a-white-table-7375048/) |
+| `cat-brewing-{700,1400}.webp` | [Michael Burrows](https://www.pexels.com/@michael-burrows/) | [Close-up of a Coffee Being Poured and Filtered](https://www.pexels.com/photo/close-up-of-a-coffee-being-poured-and-filtered-7125706/) |
+| `cat-tableware-{700,1400}.webp` | [cottonbro studio](https://www.pexels.com/@cottonbro/) | [Ceramic Bowls on Brown Wooden Surface](https://www.pexels.com/photo/ceramic-bowls-on-brown-wooden-surface-6739219/) |
+| `cat-home-{700,1400}.webp` | [Ionela Mat](https://www.pexels.com/@ionela-mat-268382825/) | [Ceramics home decor](https://www.pexels.com/photo/ceramics-home-decor-27180805/) |
+
+Fonts: [Fraunces](https://github.com/undercasetype/Fraunces) and [Instrument Sans](https://github.com/Instrument/instrument-sans), both SIL Open Font License, self-hosted via Fontsource.
+
+Demo store designed and built by [iQuee](https://iquee.tech) — no real orders or payments.

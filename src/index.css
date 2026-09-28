@@ -1,0 +1,40 @@
+@import '@fontsource-variable/fraunces/opsz.css';
+@import '@fontsource-variable/fraunces/opsz-italic.css';
+@import '@fontsource-variable/instrument-sans/index.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-paper text-ink font-sans antialiased; font-feature-settings: 'ss01'; }
+  h1, h2, h3, .display { font-family: 'Fraunces Variable', Georgia, serif; font-optical-sizing: auto; letter-spacing: -0.01em; }
+  ::selection { background: #E8C9B5; }
+  :focus-visible { outline: 2px solid #A24E2C; outline-offset: 2px; }
+  input, select, textarea { font: inherit; }
+}
+
+@layer components {
+  .wrap { @apply mx-auto w-full max-w-page px-5 sm:px-8; }
+  .label { @apply font-sans text-[0.7rem] font-semibold uppercase tracking-label text-stone; }
+  .btn { @apply inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-semibold tracking-wide transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-primary { @apply btn bg-ink text-paper hover:bg-clay-dark; }
+  .btn-clay { @apply btn bg-clay text-paper hover:bg-clay-dark; }
+  .btn-ghost { @apply btn border border-ink/80 text-ink hover:bg-ink hover:text-paper; }
+  .link-u { @apply underline decoration-1 underline-offset-4 decoration-ink/30 hover:decoration-clay hover:text-clay transition-colors; }
+  .field { @apply block w-full border border-sand bg-white/70 px-3.5 py-3 text-[0.95rem] placeholder:text-stone/60 transition-colors focus:border-ink focus:bg-white focus:outline-none; }
+  .field[aria-invalid='true'] { @apply border-clay bg-clay-light/20; }
+  .rule { @apply border-t border-ink/15; }
+}
+
+.img-fade { opacity: 0; transition: opacity .5s ease; }
+.img-fade.is-loaded { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+input[type='range'].dual { pointer-events: none; -webkit-appearance: none; appearance: none; background: transparent; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; }
+input[type='range'].dual::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; width: 18px; height: 18px; border-radius: 9999px; background: #221E19; border: 3px solid #F4EFE6; box-shadow: 0 0 0 1px #221E19; cursor: pointer; }
+input[type='range'].dual::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 9999px; background: #221E19; border: 3px solid #F4EFE6; box-shadow: 0 0 0 1px #221E19; cursor: pointer; }
+input[type='range'].dual:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px #A24E2C; }
