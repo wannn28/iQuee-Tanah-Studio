@@ -1,11 +1,9 @@
-import os
 import sys, re
 from playwright.sync_api import sync_playwright, expect
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:4173'
-CHROME = os.environ.get('CHROME_PATH', '/usr/bin/google-chrome')
 ok = lambda m: print('PASS', m)
 with sync_playwright() as p:
-    br = p.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
+    br = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
     for label, vp, mobile in [('desktop', {'width': 1280, 'height': 860}, False), ('mobile', {'width': 390, 'height': 844}, True)]:
         print(f'--- {label} ---')
         ctx = br.new_context(viewport=vp, is_mobile=mobile, has_touch=mobile)
@@ -16,8 +14,9 @@ with sync_playwright() as p:
         expect(pg.get_by_test_id('result-count')).to_contain_text('4 pieces')
         pg.goto(BASE + '/shop'); pg.fill('#shop-q', 'coffee'); expect(pg.get_by_test_id('result-count')).to_contain_text('for “coffee”'); ok('search: ' + pg.get_by_test_id('result-count').inner_text())
         pg.fill('#shop-q', ''); pg.select_option('select[aria-label="Sort products"]', 'price-desc')
-        first = pg.locator('section[aria-label=Products] article h3').first.inner_text(); assert first.startswith('Slow Pour'), first; ok('sort price desc -> ' + first)
-        pg.goto(BASE + '/shop?max=30'); n = pg.locator('section[aria-label=Products] article').count(); assert n == 4, n; ok(f'price range max=30 -> {n} items')
+        expect(pg.get_by_test_id('result-count')).to_have_text('16 pieces'); expect(pg.locator('section[aria-label=Products] article h3').first).to_have_text(re.compile('^Slow Pour'))
+        first = pg.locator('section[aria-label=Products] article h3').first.inner_text(); ok('sort price desc -> ' + first)
+        pg.goto(BASE + '/shop?max=30'); expect(pg.get_by_test_id('result-count')).to_have_text('4 pieces'); n = pg.locator('section[aria-label=Products] article').count(); assert n == 4, n; ok(f'price range max=30 -> {n} items (server-side filter)')
         # product detail, variants, qty
         pg.goto(BASE + '/shop'); pg.locator('article a[href="/products/dune-stoneware-mug"]').first.click()
         expect(pg).to_have_url(re.compile('/products/dune-stoneware-mug')); ok('open product')
@@ -62,9 +61,16 @@ with sync_playwright() as p:
         expect(pg.locator('main')).to_contain_text('$155.20')
         pg.reload(); expect(pg.get_by_test_id('order-number')).to_have_text(num); ok('confirmation deep route survives refresh')
         assert pg.evaluate("JSON.parse(localStorage.getItem('tanah.cart.v1')).length") == 0; ok('cart cleared after order')
+        # admin back-office: order must be visible (read back from PostgreSQL)
+        pg.goto(BASE + '/admin'); pg.get_by_role('button', name='Fill in').click(); pg.get_by_test_id('admin-login').click()
+        expect(pg.get_by_test_id('orders-table')).to_contain_text(num); ok('admin lists order ' + num)
+        pg.get_by_role('button', name=num).click(); expect(pg.get_by_test_id('orders-table')).to_contain_text('Hearth Teapot')
+        pg.wait_for_timeout(400); pg.screenshot(path=f'shot-admin-{label}.png', full_page=True); ok('admin screenshot')
+        pg.get_by_role('button', name='Sign out').click(); expect(pg.get_by_test_id('demo-creds')).to_be_visible()
+        pg.screenshot(path=f'shot-admin-login-{label}.png'); ok('admin sign out')
         pg.goto(BASE + '/does-not-exist'); expect(pg.get_by_role('heading', level=1)).to_contain_text('Cracked'); ok('404 route')
         sw = pg.evaluate('document.documentElement.scrollWidth'); assert sw <= vp['width'], sw; ok(f'no horizontal overflow ({sw})')
-        print('console errors:', errs)
+        print('console errors:', errs); assert not errs, errs
         ctx.close()
     br.close()
 print('ALL FLOW TESTS PASSED')

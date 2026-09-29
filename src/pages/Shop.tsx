@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
 import { CloseIcon, SearchIcon } from '../components/Icons'
-import { categories, categoryName, PRICE_MAX, products } from '../data/products'
+import type { Product } from '../data/products'
+import { getProducts } from '../lib/api'
+import { useCatalog } from '../store/catalog'
+import { CardSkeletons, ErrorBox } from '../components/Status'
 import { money } from '../lib/format'
 import useTitle from '../lib/useTitle'
 
@@ -14,7 +17,7 @@ const SORTS = [
   { id: 'name', label: 'Name: A–Z' },
 ]
 
-function PriceRange({ min, max, onChange }: { min: number; max: number; onChange: (min: number, max: number) => void }) {
+function PriceRange({ min, max, onChange, PRICE_MAX }: { min: number; max: number; onChange: (min: number, max: number) => void; PRICE_MAX: number }) {
   const l = (min / PRICE_MAX) * 100, r = (max / PRICE_MAX) * 100
   return (
     <fieldset>
@@ -35,6 +38,7 @@ function PriceRange({ min, max, onChange }: { min: number; max: number; onChange
 export default function Shop() {
   const [params, setParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const { categories, categoryName, priceMax: PRICE_MAX, products: all } = useCatalog()
   const q = params.get('q') ?? ''
   const cat = params.get('category') ?? ''
   const sort = params.get('sort') ?? 'featured'
@@ -51,21 +55,24 @@ export default function Shop() {
     setParams(next, { replace: true })
   }
 
-  const results = useMemo(() => {
-    const needle = q.trim().toLowerCase()
-    let list = products.filter((p) =>
-      (!cat || p.category === cat) &&
-      p.price >= min && p.price <= max &&
-      (!needle || [p.name, p.short, categoryName(p.category), ...p.details, ...p.description].join(' ').toLowerCase().includes(needle)),
-    )
-    list = [...list]
-    if (sort === 'price-asc') list.sort((a, b) => a.price - b.price)
-    else if (sort === 'price-desc') list.sort((a, b) => b.price - a.price)
-    else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name))
-    else if (sort === 'newest') list.sort((a, b) => b.added - a.added)
-    else list.sort((a, b) => Number(!!b.featured) - Number(!!a.featured))
-    return list
-  }, [q, cat, sort, min, max])
+  // Filtering, search and sorting run server-side (PostgreSQL) via GET /api/products
+  const [results, setResults] = useState<Product[]>([])
+  const key = JSON.stringify([cat, q.trim(), sort, min, max])
+  const [resultKey, setResultKey] = useState('')
+  const stale = resultKey !== key
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [err, setErr] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    const ctrl = new AbortController()
+    setState((s) => (s === 'ready' ? 'ready' : 'loading'))
+    const t = setTimeout(() => {
+      getProducts({ category: cat, q: q.trim(), sort, min: min > 0 ? min : undefined, max: max < PRICE_MAX ? max : undefined })
+        .then((r) => { if (!ctrl.signal.aborted) { setResults(r.items); setResultKey(key); setState('ready') } })
+        .catch((e: Error) => { if (!ctrl.signal.aborted) { setErr(e.message); setState('error') } })
+    }, q ? 250 : 0) // debounce typing
+    return () => { ctrl.abort(); clearTimeout(t) }
+  }, [q, cat, sort, min, max, PRICE_MAX, attempt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeCount = (cat ? 1 : 0) + (min > 0 || max < PRICE_MAX ? 1 : 0) + (q ? 1 : 0)
   const current = categories.find((c) => c.id === cat)
@@ -76,7 +83,7 @@ export default function Shop() {
         <legend className="label mb-3">Category</legend>
         <ul className="space-y-1">
           {[{ id: '', name: 'All pieces' }, ...categories].map((c) => {
-            const n = c.id ? products.filter((p) => p.category === c.id).length : products.length
+            const n = c.id ? categories.find((x) => x.id === c.id)?.productCount ?? 0 : all.length
             const on = cat === c.id
             return (
               <li key={c.id || 'all'}>
@@ -93,7 +100,7 @@ export default function Shop() {
           })}
         </ul>
       </fieldset>
-      <PriceRange min={min} max={max} onChange={(a, b) => set({ min: a, max: b })} />
+      <PriceRange min={min} max={max} PRICE_MAX={PRICE_MAX} onChange={(a, b) => set({ min: a, max: b })} />
       {activeCount > 0 && (
         <button className="text-sm link-u" onClick={() => setParams(sort !== 'featured' ? { sort } : {}, { replace: true })}>Clear all filters</button>
       )}
@@ -121,7 +128,7 @@ export default function Shop() {
           <button className="btn-ghost px-4 py-2 lg:hidden" onClick={() => setFiltersOpen(true)} aria-expanded={filtersOpen} aria-controls="filters-mobile">
             Filters{activeCount ? ` (${activeCount})` : ''}
           </button>
-          <p className="text-sm text-stone" aria-live="polite" data-testid="result-count">{results.length} {results.length === 1 ? 'piece' : 'pieces'}{q && <> for “<span className="text-ink">{q}</span>”</>}</p>
+          <p className="text-sm text-stone" aria-live="polite" data-testid="result-count">{state === 'loading' || (stale && state === 'ready') ? 'Updating…' : <>{results.length} {results.length === 1 ? 'piece' : 'pieces'}{q && <> for “<span className="text-ink">{q}</span>”</>}</>}</p>
         </div>
         <label className="flex items-center gap-2 text-sm">
           <span className="hidden text-stone sm:inline">Sort by</span>
@@ -149,8 +156,8 @@ export default function Shop() {
         )}
 
         <section aria-label="Products">
-          {results.length ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:gap-x-6">
+          {state === 'loading' ? <CardSkeletons /> : state === 'error' ? <ErrorBox message={err} onRetry={() => setAttempt((a) => a + 1)} /> : results.length ? (
+            <div className={`grid grid-cols-2 gap-x-4 gap-y-10 transition-opacity md:grid-cols-3 lg:gap-x-6 ${stale ? 'opacity-50' : ''}`} aria-busy={stale}>
               {results.map((p, i) => <ProductCard key={p.id} p={p} eager={i < 3} sizes="(min-width: 1024px) 25vw, (min-width: 768px) 30vw, 48vw" />)}
             </div>
           ) : (

@@ -1,0 +1,54 @@
+# Tanah Studio shop - API + PostgreSQL 16
+# Usage: cp .env.example .env (fill in secrets) && docker compose up -d --build
+# The database is NOT published on the host; the API is published on 127.0.0.1 only (Nginx proxies /api/).
+name: iquee-shop
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tanah}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-tanah}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 384m
+    networks: [internal]
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  api:
+    build: ./server
+    image: iquee-shop-api:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-tanah}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tanah}?schema=public
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://shop.iquee.tech}
+      TRUST_PROXY: ${TRUST_PROXY:-2}
+      ADMIN_USER: ${ADMIN_USER:-demo}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      ADMIN_TOKEN_SECRET: ${ADMIN_TOKEN_SECRET:?set ADMIN_TOKEN_SECRET in .env}
+      RUN_SEED: ${RUN_SEED:-true}
+    ports:
+      - "127.0.0.1:${API_PORT:-8001}:8001"
+    mem_limit: 256m
+    networks: [internal]
+    logging: *logging
+
+volumes:
+  pgdata:
+
+networks:
+  internal:

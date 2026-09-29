@@ -10,6 +10,7 @@ import CartPage from './pages/Cart'
 import Checkout from './pages/Checkout'
 import Confirmation from './pages/Confirmation'
 import NotFound from './pages/NotFound'
+import Admin from './pages/Admin'
 
 function ScrollManager() {
   const { pathname, hash } = useLocation()
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/order/:orderNo" element={<Confirmation />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
