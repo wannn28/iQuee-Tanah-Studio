@@ -17,15 +17,24 @@ A finished demo e-commerce storefront for a fictional boutique selling handmade 
 - Cart, promo, and demo orders persisted in `localStorage`
 - Static SPA build suitable for nginx (see `deploy/`)
 
-## Stack
+## Tech Stack
 
-- React 18 + TypeScript
-- Vite 5
-- Tailwind CSS 3
-- React Router 6
-- Self-hosted variable fonts (Fraunces, Instrument Sans)
+| Area | Choice | Version |
+| --- | --- | --- |
+| Frontend framework / language | React + TypeScript | React `^18.3.1`, TypeScript `~5.6.2` |
+| Styling | Tailwind CSS (+ PostCSS, Autoprefixer); self-hosted variable fonts Fraunces & Instrument Sans | Tailwind `^3.4.19`, PostCSS `^8.5.28`, Autoprefixer `^10.6.1`, fonts `^5.3.0` |
+| Routing | React Router DOM | `^6.30.6` |
+| State / data storage (cart) | Browser `localStorage` only — no backend or database. Products are mock data in code; cart, promo codes, and demo orders persist in the browser. | — |
+| Images | Local WebP assets (from [Pexels](https://www.pexels.com); see [CREDITS.md](./CREDITS.md)) | — |
+| Build tooling | Vite (+ `@vitejs/plugin-react`) | Vite `^5.4.10`, plugin `^4.3.3` |
+| Linting | ESLint 9 flat config (`eslint`, `typescript-eslint`, React Hooks / Refresh plugins) | ESLint `^9.13.0`, typescript-eslint `^8.11.0` |
+| Hosting / deploy | Static SPA on Nginx (Ubuntu VPS), Cloudflare in front, Let's Encrypt SSL (see `deploy/`) | — |
 
-Product and editorial photographs are from [Pexels](https://www.pexels.com), stored locally as WebP — see [CREDITS.md](./CREDITS.md).
+**Honest limits:** there is **no backend**, **no database**, and **no real payments**. Checkout is a demo UI only.
+
+### Production-ready path *(future work — not implemented)*
+
+To turn this demo into a real store you would still need, for example: a REST API + PostgreSQL (or similar) for products/orders, a payment gateway such as Stripe, and an admin CMS. None of that exists in this repo today.
 
 ## Getting started
 
