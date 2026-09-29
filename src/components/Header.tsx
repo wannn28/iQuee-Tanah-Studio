@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import Logo from './Logo'
 import { BagIcon, CloseIcon, MenuIcon, SearchIcon } from './Icons'
 import { useCart } from '../store/cart'
-import { categories } from '../data/products'
+import { useCatalog } from '../store/catalog'
 
 export function DemoBar() {
   return (
@@ -16,10 +16,11 @@ export function DemoBar() {
   )
 }
 
-const nav = [{ to: '/shop', label: 'Shop all' }, ...categories.map((c) => ({ to: `/shop?category=${c.id}`, label: c.name }))]
 
 export default function Header() {
   const { count, openDrawer } = useCart()
+  const { categories } = useCatalog()
+  const nav = [{ to: '/shop', label: 'Shop all' }, ...categories.map((c) => ({ to: `/shop?category=${c.id}`, label: c.name }))]
   const [menu, setMenu] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [q, setQ] = useState('')

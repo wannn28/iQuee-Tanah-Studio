@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom'
 import Img from '../components/Img'
 import ProductCard from '../components/ProductCard'
 import { ArrowIcon } from '../components/Icons'
-import { categories, products } from '../data/products'
+import { useCatalog } from '../store/catalog'
+import { CardSkeletons, ErrorBox } from '../components/Status'
 import useTitle from '../lib/useTitle'
 
 export default function Home() {
   useTitle()
+  const { categories, products, status, error, retry } = useCatalog()
   const featured = products.filter((p) => p.featured).slice(0, 8)
   return (
     <>
@@ -62,6 +64,7 @@ export default function Home() {
           <Link to="/shop" className="hidden text-sm font-semibold link-u sm:inline">View everything</Link>
         </div>
         <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-6">
+          {status === 'loading' && [0, 1, 2, 3].map((i) => <div key={i} className="aspect-[4/5] animate-pulse bg-bone" aria-hidden />)}
           {categories.map((c, i) => (
             <Link key={c.id} to={`/shop?category=${c.id}`} className={`group block ${i % 2 ? 'lg:mt-14' : ''}`}>
               <div className="aspect-[4/5] overflow-hidden bg-bone">
@@ -87,8 +90,10 @@ export default function Home() {
               <p className="label">Fresh from the kiln</p>
               <h2 id="feat-h" className="mt-3 text-3xl sm:text-4xl">This season’s favourites</h2>
             </div>
-            <Link to="/shop" className="inline-flex items-center gap-2 text-sm font-semibold link-u">Shop all {products.length} pieces <ArrowIcon /></Link>
+            <Link to="/shop" className="inline-flex items-center gap-2 text-sm font-semibold link-u">Shop all {products.length || ''} pieces <ArrowIcon /></Link>
           </div>
+          {status === 'loading' && <div className="mt-10"><CardSkeletons n={4} /></div>}
+          {status === 'error' && <ErrorBox message={error ?? 'Could not load products.'} onRetry={retry} />}
           <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
             {featured.map((p) => <ProductCard key={p.id} p={p} sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, 48vw" />)}
           </div>

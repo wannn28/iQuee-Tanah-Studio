@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Img from '../components/Img'
 import { PromoForm } from '../components/CartSummary'
@@ -6,7 +6,9 @@ import { optionText } from '../components/CartDrawer'
 import { LockIcon } from '../components/Icons'
 import { money } from '../lib/format'
 import { SHIPPING_METHODS, shippingCost, useCart } from '../store/cart'
-import { newOrderNumber, saveOrder } from '../lib/order'
+import { api, quoteCart, saveOrderToken, type Quote } from '../lib/api'
+import { useCatalog } from '../store/catalog'
+import { ErrorBox, Spinner } from '../components/Status'
 import useTitle from '../lib/useTitle'
 
 const COUNTRIES = ['United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Netherlands', 'France', 'Singapore', 'Japan', 'Indonesia', 'Other']
@@ -63,9 +65,26 @@ export default function Checkout() {
   const errors = useMemo(() => validate(f), [f])
   const errCount = Object.keys(errors).length
 
+  const catalog = useCatalog()
+  const [placeError, setPlaceError] = useState('')
+
+  // Instant client estimate, then replaced by the authoritative server quote (POST /api/cart/quote)
+  const [quote, setQuote] = useState<Quote | null>(null)
+  const cartKey = JSON.stringify([lines.map((l) => [l.productId, l.options, l.qty]), promo?.code, f.shipping])
+  useEffect(() => {
+    if (!lines.length) return
+    let alive = true
+    quoteCart(lines.map((l) => ({ productId: l.productId, options: l.options, qty: l.qty })), promo?.code ?? null, f.shipping)
+      .then((q) => { if (alive) setQuote(q) })
+      .catch(() => { if (alive) setQuote(null) })
+    return () => { alive = false }
+  }, [cartKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const after = subtotal - discount
-  const ship = shippingCost(after, f.shipping, promo)
-  const total = after + ship
+  const estShip = shippingCost(after, f.shipping, promo)
+  const fresh = quote && quote.shipping.id === f.shipping
+  const ship = fresh ? quote.shipping.price : estShip
+  const total = fresh ? quote.total : after + estShip
   const method = SHIPPING_METHODS.find((m) => m.id === f.shipping)!
 
   const show = (k: keyof Form) => (submitted || touched[k]) && errors[k]
@@ -78,6 +97,8 @@ export default function Checkout() {
     className: 'field',
   })
 
+  if (catalog.status === 'loading') return <Spinner label="Loading checkout…" />
+  if (catalog.status === 'error') return <ErrorBox message={catalog.error ?? ''} onRetry={catalog.retry} />
   if (!lines.length && !placing) {
     return (
       <div className="wrap py-24 text-center">
@@ -97,16 +118,26 @@ export default function Checkout() {
       return
     }
     setPlacing(true)
-    const number = newOrderNumber()
-    saveOrder({
-      number, placedAt: new Date().toISOString(), email: f.email.trim(), name: `${f.firstName} ${f.lastName}`.trim(),
-      address: [f.address1, f.address2, `${f.city}, ${f.region} ${f.postal}`, f.country].filter(Boolean),
-      shipping: { name: method.name, eta: method.eta, price: ship },
-      payment: f.payment === 'card' ? `Demo card ending ${f.cardNumber.replace(/\D/g, '').slice(-4)}` : f.payment === 'paypal' ? 'PayPal (demo)' : 'Bank transfer (demo)',
-      promo, subtotal, discount, total,
-      lines: lines.map((l) => ({ name: l.product.name, options: optionText(l.options), qty: l.qty, total: l.total, image: l.product.images[0].src })),
+    setPlaceError('')
+    // Only ids, options and quantities are sent; the server re-prices everything and stores the order in PostgreSQL.
+    // The full card number never leaves the browser (demo) — only the last 4 digits for the receipt.
+    api<{ number: string; accessToken: string; total: number }>('/orders', {
+      method: 'POST',
+      json: {
+        lines: lines.map((l) => ({ productId: l.productId, options: l.options, qty: l.qty })),
+        promoCode: promo?.code ?? null,
+        shippingMethod: f.shipping,
+        customer: {
+          email: f.email.trim(), phone: f.phone.trim() || undefined, firstName: f.firstName.trim(), lastName: f.lastName.trim(),
+          address1: f.address1.trim(), address2: f.address2.trim() || undefined, city: f.city.trim(), region: f.region.trim(),
+          postal: f.postal.trim(), country: f.country,
+        },
+        payment: f.payment === 'card' ? { method: 'card', last4: f.cardNumber.replace(/\D/g, '').slice(-4) } : { method: f.payment },
+        expectedTotal: total,
+      },
     })
-    setTimeout(() => { clear(); navigate(`/order/${number}`) }, 700)
+      .then((r) => { saveOrderToken(r.number, r.accessToken); clear(); navigate(`/order/${r.number}`) })
+      .catch((err: Error) => { setPlacing(false); setPlaceError(err.message) })
   }
 
   return (
@@ -171,7 +202,7 @@ export default function Checkout() {
               <span className="ml-auto bg-clay px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-paper">Demo only</span>
             </legend>
             <p className="mb-4 border border-dashed border-clay/60 bg-clay-light/20 px-4 py-3 text-sm leading-relaxed">
-              <strong>This is a demo payment selector.</strong> No card is charged and no data leaves your browser. The test card below is prefilled for you.
+              <strong>This is a demo payment selector.</strong> No card is charged and the card number never leaves your browser (only the last 4 digits go on the demo receipt). The test card below is prefilled for you.
             </p>
             <div className="divide-y divide-sand border border-sand bg-white/50">
               {[{ id: 'card', label: 'Credit / debit card', hint: 'Visa, Mastercard, Amex — demo' }, { id: 'paypal', label: 'PayPal', hint: 'Redirect simulated — demo' }, { id: 'bank', label: 'Bank transfer', hint: 'Instructions by email — demo' }].map((pm) => (
@@ -194,6 +225,7 @@ export default function Checkout() {
           </fieldset>
 
           <div>
+            {placeError && <p role="alert" className="mb-3 border-l-2 border-clay bg-clay-light/30 px-4 py-3 text-sm">Couldn’t place the order: {placeError}</p>}
             <button type="submit" className="btn-clay w-full py-4 text-base" disabled={placing} data-testid="place-order">
               {placing ? 'Placing order…' : <>Place demo order · {money(total)}</>}
             </button>
@@ -218,12 +250,13 @@ export default function Checkout() {
             </ul>
             <div className="mt-6 border-t border-ink/15 pt-5"><PromoForm compact /></div>
             <dl className="mt-5 space-y-2 text-sm">
-              <div className="flex justify-between"><dt className="text-stone">Subtotal</dt><dd className="tabular-nums">{money(subtotal)}</dd></div>
-              {discount > 0 && <div className="flex justify-between text-moss"><dt>Discount ({promo})</dt><dd className="tabular-nums" data-testid="discount">−{money(discount)}</dd></div>}
+              <div className="flex justify-between"><dt className="text-stone">Subtotal</dt><dd className="tabular-nums">{money(fresh ? quote.subtotal : subtotal)}</dd></div>
+              {discount > 0 && <div className="flex justify-between text-moss"><dt>Discount ({promo?.code})</dt><dd className="tabular-nums" data-testid="discount">−{money(fresh ? quote.discount : discount)}</dd></div>}
               <div className="flex justify-between"><dt className="text-stone">Shipping · {method.name}</dt><dd className="tabular-nums">{ship === 0 ? 'Free' : money(ship)}</dd></div>
               <div className="flex justify-between"><dt className="text-stone">Taxes</dt><dd className="text-stone">$0.00 (demo)</dd></div>
               <div className="flex items-baseline justify-between border-t border-ink/15 pt-3 text-base"><dt className="font-semibold">Total <span className="text-xs font-normal text-stone">USD</span></dt><dd className="font-serif text-2xl tabular-nums" data-testid="checkout-total">{money(total)}</dd></div>
             </dl>
+            <p className="mt-3 text-xs text-stone" data-testid="quote-status">{fresh ? '✓ Prices and totals confirmed by the store server.' : 'Confirming prices with the store server…'}</p>
           </div>
         </aside>
       </div>

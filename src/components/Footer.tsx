@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
-import { categories } from '../data/products'
+import { useCatalog } from '../store/catalog'
 import Logo from './Logo'
 
 export default function Footer() {
+  const { categories } = useCatalog()
   return (
     <footer className="mt-24 border-t border-ink/15 bg-bone/60">
       <div className="wrap grid gap-10 py-14 md:grid-cols-12">
@@ -11,7 +12,7 @@ export default function Footer() {
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-stone">
             Small-batch stoneware and single-origin Indonesian coffee, made for slow mornings. Thrown, glazed and packed by a studio of four.
           </p>
-          <form className="mt-6 flex max-w-sm border-b border-ink/40" onSubmit={(e) => { e.preventDefault(); (e.currentTarget.elements.namedItem('nl') as HTMLInputElement).value = ''; alert('Demo only — no emails are collected.') }}>
+          <form className="mt-6 flex max-w-sm border-b border-ink/40" onSubmit={(e) => { e.preventDefault(); (e.currentTarget.elements.namedItem('nl') as HTMLInputElement).value = ''; alert('Demo only — no newsletter emails are collected.') }}>
             <label htmlFor="nl" className="sr-only">Email address</label>
             <input id="nl" name="nl" type="email" required placeholder="Kiln notes, once a month" className="w-full bg-transparent py-3 text-sm placeholder:text-stone/70 focus:outline-none" />
             <button className="px-2 text-sm font-semibold hover:text-clay">Subscribe</button>
@@ -30,6 +31,7 @@ export default function Footer() {
             <li><span className="text-stone">Shipping: worldwide</span></li>
             <li><span className="text-stone">Returns: 30 days</span></li>
             <li><span className="text-stone">Care guide</span></li>
+            <li><Link className="hover:text-clay" to="/admin">Store admin (demo)</Link></li>
           </ul>
         </div>
         <div className="md:col-span-2">

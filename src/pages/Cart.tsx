@@ -7,10 +7,15 @@ import { ArrowIcon } from '../components/Icons'
 import { money } from '../lib/format'
 import { useCart } from '../store/cart'
 import useTitle from '../lib/useTitle'
+import { useCatalog } from '../store/catalog'
+import { ErrorBox, Spinner } from '../components/Status'
 
 export default function CartPage() {
   const { lines, setQty, remove, count } = useCart()
+  const catalog = useCatalog()
   useTitle('Cart')
+  if (catalog.status === 'loading') return <Spinner label="Loading your cart…" />
+  if (catalog.status === 'error') return <ErrorBox message={catalog.error ?? ''} onRetry={catalog.retry} />
   return (
     <div className="wrap pt-10 lg:pt-14">
       <h1 className="text-4xl sm:text-5xl">Your cart</h1>

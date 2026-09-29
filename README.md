@@ -1,66 +1,123 @@
-# Tanah Studio
+# Tanah Studio — full-stack e-commerce demo by iQuee
 
-A finished demo e-commerce storefront for a fictional boutique selling handmade stoneware and Indonesian coffee. Built as a portfolio piece by [iQuee](https://iquee.tech).
-
-**Demo only — no real orders or payments.** Cart, promo codes, and demo orders live in `localStorage`.
-
-**Live demo:** [https://shop.iquee.tech](https://shop.iquee.tech)
-
-## Features
-
-- Home, catalog, product detail, cart, checkout, and order confirmation
-- Catalog filters: category, search, sort, and price range (URL-synced)
-- Product gallery, variants with price deltas, quantity stepper, related products
-- Cart drawer and cart page with qty/remove, promo codes `DEMO10` / `FREESHIP`, and a free-shipping meter
-- Validated checkout with a demo payment selector
-- Order confirmation with a generated order number
-- Cart, promo, and demo orders persisted in `localStorage`
-- Static SPA build suitable for nginx (see `deploy/`)
+A boutique store (handmade stoneware + Indonesian coffee) built as a portfolio piece: a React storefront backed by a
+real **Node.js / Express / Prisma / PostgreSQL** API. Catalog, search, promo codes, server-side pricing and orders all
+go through the API and are stored in PostgreSQL. A small password-protected back office lists the orders.
+**Demo only — no payments are taken and nothing ships.** Live: https://shop.iquee.tech · Admin: https://shop.iquee.tech/admin
 
 ## Tech Stack
 
-| Area | Choice | Version |
-| --- | --- | --- |
-| Frontend framework / language | React + TypeScript | React `^18.3.1`, TypeScript `~5.6.2` |
-| Styling | Tailwind CSS (+ PostCSS, Autoprefixer); self-hosted variable fonts Fraunces & Instrument Sans | Tailwind `^3.4.19`, PostCSS `^8.5.28`, Autoprefixer `^10.6.1`, fonts `^5.3.0` |
-| Routing | React Router DOM | `^6.30.6` |
-| State / data storage (cart) | Browser `localStorage` only — no backend or database. Products are mock data in code; cart, promo codes, and demo orders persist in the browser. | — |
-| Images | Local WebP assets (from [Pexels](https://www.pexels.com); see [CREDITS.md](./CREDITS.md)) | — |
-| Build tooling | Vite (+ `@vitejs/plugin-react`) | Vite `^5.4.10`, plugin `^4.3.3` |
-| Linting | ESLint 9 flat config (`eslint`, `typescript-eslint`, React Hooks / Refresh plugins) | ESLint `^9.13.0`, typescript-eslint `^8.11.0` |
-| Hosting / deploy | Static SPA on Nginx (Ubuntu VPS), Cloudflare in front, Let's Encrypt SSL (see `deploy/`) | — |
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 18.3 + TypeScript 5.6 (strict), Vite 5.4, Tailwind CSS 3.4, React Router 6.30, self-hosted fonts (Fraunces, Instrument Sans) |
+| Backend / API | Node.js 20 + TypeScript, Express 4.22, zod 3 request validation, helmet, CORS allow-list, express-rate-limit |
+| Database | PostgreSQL 16, accessed with Prisma ORM 6.19 (schema + versioned SQL migrations + seed script) |
+| Auth (demo admin) | Username/password from env, constant-time compare, stateless HMAC-SHA256 signed bearer token (8 h) |
+| Infrastructure | Docker (multi-stage image, non-root user, healthcheck), Docker Compose (API + DB, named volume, private network) |
+| Web server | Nginx: serves the static SPA and reverse-proxies `/api/` to the API container on `127.0.0.1:8001`; Let's Encrypt TLS; Cloudflare in front |
+| QA | Playwright end-to-end flow (`flow.py`), API smoke test (`server/scripts/smoke.mjs`) |
 
-**Honest limits:** there is **no backend**, **no database**, and **no real payments**. Checkout is a demo UI only.
+## Architecture
 
-### Production-ready path *(future work — not implemented)*
+```
+Browser ──HTTPS──> Cloudflare ──> Nginx (shop.iquee.tech)
+                                   ├── /        -> /var/www/iquee-shop  (Vite build, SPA fallback)
+                                   └── /api/    -> 127.0.0.1:8001 ──> [api]  Node 20 + Express + Prisma
+                                                                        │   (Docker network "internal")
+                                                                        └──> [db] PostgreSQL 16 (no host port, volume pgdata)
+```
 
-To turn this demo into a real store you would still need, for example: a REST API + PostgreSQL (or similar) for products/orders, a payment gateway such as Stripe, and an admin CMS. None of that exists in this repo today.
+- **Catalog** — 16 products / 4 categories live in PostgreSQL (seeded from `server/src/seed-data.ts`). Filtering, search
+  (case-insensitive across name, copy, JSON details and category) and sorting run in SQL via `GET /api/products`.
+- **Cart** — kept in the browser (`localStorage`) for instant UX; it only stores product ids, options and quantities.
+  **The server never trusts client prices**: `POST /api/cart/quote` and `POST /api/orders` re-price every line from the
+  database (base price + option deltas), apply the promo code from the `promo_codes` table and compute shipping.
+- **Orders** — created in a single Prisma write (order + items), numbered `TNH-######`, with a random access token so
+  only the buyer's browser can open the confirmation page. Money is stored as integer cents.
+- **Admin** — `/admin` page → `POST /api/admin/login` → bearer token → order list, stats, status updates. Because the demo
+  credentials are public, shopper emails and addresses are masked in admin responses.
 
-## Getting started
+### API
+
+| Method & path | Purpose |
+| --- | --- |
+| `GET /api/health` | Liveness + DB check (`SELECT 1`) |
+| `GET /api/categories` | Categories with product counts |
+| `GET /api/products?category=&q=&sort=featured\|newest\|price-asc\|price-desc\|name&min=&max=&featured=` | Product list (server-side filter/search/sort) + `priceMax` |
+| `GET /api/products/:slug` | Product detail + 4 related products |
+| `GET /api/shipping-methods` | Shipping options and free-shipping threshold |
+| `POST /api/promo/validate` `{ code }` | Validate a promo code (`DEMO10`, `FREESHIP`) |
+| `POST /api/cart/quote` `{ lines, promoCode, shippingMethod }` | Authoritative server-side cart pricing |
+| `POST /api/orders` `{ lines, promoCode, shippingMethod, customer, payment }` | Create an order with server-computed totals (rate limited) |
+| `GET /api/orders/:number?token=` | Order confirmation |
+| `POST /api/admin/login` | Demo admin login → bearer token |
+| `GET /api/admin/stats` · `GET /api/admin/orders?page=&status=` · `PATCH /api/admin/orders/:number/status` | Back office (bearer token) |
+
+Demo admin: **`demo` / `tanah-admin-demo`** (public on purpose; data is fake and PII is masked).
+
+## Local development
+
+Requirements: Node 20+, PostgreSQL 14+ (or Docker).
 
 ```bash
+# 1) database (either a local postgres or: docker compose up -d db  — add a ports mapping for local use)
+createuser -P tanah && createdb -O tanah tanah
+
+# 2) API
+cd server
+cp .env.example .env          # set DATABASE_URL, ADMIN_PASSWORD, ADMIN_TOKEN_SECRET
 npm install
-npm run dev       # local development server
-npm run build     # typecheck + production build -> dist/
-npm run preview   # serve the built dist/ locally
-npm run lint      # ESLint
+npx prisma migrate dev        # applies prisma/migrations
+npm run db:seed:dev           # loads the 16 products, 4 categories, promo codes
+npm run dev                   # http://localhost:8001/api/health
+npm run test:api              # smoke test (set ADMIN_PASSWORD to include admin checks)
+
+# 3) frontend (Vite proxies /api -> localhost:8001)
+cd ..
+npm install
+npm run dev                   # http://localhost:5173
+npm run build                 # type-check + build -> dist/
 ```
 
-Serve `dist/` with SPA fallback to `index.html` (examples in `deploy/`).
-
-### Optional Playwright helpers
-
-Requires Playwright (and Chrome/Chromium) plus a running preview server on port 4173:
+## Production (Docker Compose)
 
 ```bash
-npx vite preview --port 4173
-python shots.py                 # screenshots -> shot-*.png in the repo root
-python flow.py                  # end-to-end storefront flow checks
-python tools/render_meta.py     # regenerate OG image and favicon PNGs
+cp .env.example .env    # generate secrets: openssl rand -hex 24 / 32 ; chmod 600 .env
+docker compose up -d --build        # project name: iquee-shop
+curl http://127.0.0.1:8001/api/health
 ```
 
-Override paths with env vars if needed: `CHROME_PATH`, `SHOTS_OUT`. A local venv such as `.venv-pw` is fine; it is gitignored.
+The API container runs `prisma migrate deploy` and the idempotent seed on start, then serves on port 8001, published
+**only on 127.0.0.1**. PostgreSQL has no published port and persists to the named volume `pgdata`. Both containers use
+`restart: unless-stopped`, memory limits and rotated logs. Nginx adds:
 
-## License / credits
+```nginx
+location ^~ /api/ {
+    proxy_pass http://127.0.0.1:8001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
 
-Tanah Studio is a fictional brand. Product names, descriptions, and prices are invented for this demo. Image credits: [CREDITS.md](./CREDITS.md).
+## Project layout
+
+```
+src/                 React storefront (pages, components, store/catalog + store/cart, lib/api.ts)
+  pages/Admin.tsx    demo back office
+server/
+  prisma/            schema.prisma + migrations/
+  src/               app.ts, routes/{catalog,checkout,admin}.ts, lib/{pricing,auth,serialize,http}.ts, seed.ts, seed-data.ts
+  scripts/smoke.mjs  API end-to-end smoke test
+  Dockerfile, docker-entrypoint.sh
+docker-compose.yml   api + db
+flow.py / shots.py   Playwright E2E flow + screenshots
+```
+
+## Screenshots
+
+| Admin — orders from PostgreSQL | Admin — login |
+| --- | --- |
+| ![Admin orders](docs/admin-orders.png) | ![Admin login](docs/admin-login.png) |
+
+Images: Pexels, stored locally as WebP (see CREDITS.md). Designed and built by [iQuee](https://iquee.tech).

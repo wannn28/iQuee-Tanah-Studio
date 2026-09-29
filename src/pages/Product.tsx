@@ -4,7 +4,10 @@ import Img from '../components/Img'
 import ProductCard from '../components/ProductCard'
 import QtyStepper from '../components/QtyStepper'
 import { CheckIcon } from '../components/Icons'
-import { categoryName, getProduct, products } from '../data/products'
+import type { Product } from '../data/products'
+import { ApiError, getProduct } from '../lib/api'
+import { useCatalog } from '../store/catalog'
+import { ErrorBox, Spinner } from '../components/Status'
 import { money } from '../lib/format'
 import { unitPrice, useCart, FREE_SHIPPING_OVER } from '../store/cart'
 import useTitle from '../lib/useTitle'
@@ -12,13 +15,26 @@ import NotFound from './NotFound'
 
 export default function ProductPage() {
   const { slug = '' } = useParams()
-  const p = getProduct(slug)
+  const { categoryName } = useCatalog()
+  const [data, setData] = useState<{ product: Product; related: Product[] } | null>(null)
+  const [state, setState] = useState<'loading' | 'ready' | 'notfound' | 'error'>('loading')
+  const [err, setErr] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let alive = true
+    setState('loading')
+    getProduct(slug)
+      .then((r) => { if (alive) { setData(r); setState('ready') } })
+      .catch((e: Error) => { if (!alive) return; if (e instanceof ApiError && e.status === 404) setState('notfound'); else { setErr(e.message); setState('error') } })
+    return () => { alive = false }
+  }, [slug, attempt])
+  const p = state === 'ready' ? data?.product : undefined
   const { add } = useCart()
   const [active, setActive] = useState(0)
   const [qty, setQty] = useState(1)
   const [sel, setSel] = useState<Record<string, string>>({})
   const [added, setAdded] = useState(false)
-  useTitle(p?.name ?? 'Not found')
+  useTitle(p?.name ?? (state === 'notfound' ? 'Not found' : 'Loading…'))
 
   useEffect(() => {
     if (!p) return
@@ -26,13 +42,10 @@ export default function ProductPage() {
     setSel(Object.fromEntries(p.options.map((o) => [o.name, o.values[0].label])))
   }, [p])
 
-  const related = useMemo(() => {
-    if (!p) return []
-    const same = products.filter((x) => x.category === p.category && x.id !== p.id)
-    const other = products.filter((x) => x.category !== p.category && x.featured)
-    return [...same, ...other].slice(0, 4)
-  }, [p])
+  const related = useMemo(() => data?.related ?? [], [data])
 
+  if (state === 'loading') return <Spinner label="Loading product…" />
+  if (state === 'error') return <ErrorBox message={err} onRetry={() => setAttempt((a) => a + 1)} />
   if (!p) return <NotFound />
   const price = unitPrice(p, sel)
 

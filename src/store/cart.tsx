@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { products, type Product } from '../data/products'
+import type { Product } from '../data/products'
+import { useCatalog } from './catalog'
+import { validatePromo, type PromoInfo } from '../lib/api'
 
 export interface CartLine {
   key: string
@@ -14,13 +16,11 @@ export const SHIPPING_METHODS: ShippingMethod[] = [
   { id: 'express', name: 'Express', eta: '2–3 business days', price: 22 },
 ]
 export const FREE_SHIPPING_OVER = 120
-export const PROMOS: Record<string, { label: string; percent?: number; freeShipping?: boolean }> = {
-  DEMO10: { label: '10% off your order', percent: 10 },
-  FREESHIP: { label: 'Free standard shipping', freeShipping: true },
-}
+// Shipping rules are mirrored here for instant UI estimates only; the API (server/src/lib/pricing.ts)
+// re-prices every cart and computes the authoritative totals at checkout.
 
 const LS_CART = 'tanah.cart.v1'
-const LS_PROMO = 'tanah.promo.v1'
+const LS_PROMO = 'tanah.promo.v2'
 
 export function unitPrice(p: Product, options: Record<string, string>) {
   let price = p.price
@@ -31,9 +31,9 @@ export function unitPrice(p: Product, options: Record<string, string>) {
   return price
 }
 
-export function shippingCost(subtotalAfterDiscount: number, methodId: string, promo: string | null) {
+export function shippingCost(subtotalAfterDiscount: number, methodId: string, promo: PromoInfo | null) {
   const m = SHIPPING_METHODS.find((s) => s.id === methodId) ?? SHIPPING_METHODS[0]
-  if (m.id === 'standard' && (subtotalAfterDiscount >= FREE_SHIPPING_OVER || (promo && PROMOS[promo]?.freeShipping))) return 0
+  if (m.id === 'standard' && (subtotalAfterDiscount >= FREE_SHIPPING_OVER || promo?.freeShipping)) return 0
   return m.price
 }
 
@@ -51,14 +51,14 @@ interface CartCtx {
   count: number
   subtotal: number
   discount: number
-  promo: string | null
+  promo: PromoInfo | null
   drawerOpen: boolean
   lastAdded: string | null
   add: (productId: string, options: Record<string, string>, qty?: number) => void
   setQty: (key: string, qty: number) => void
   remove: (key: string) => void
   clear: () => void
-  applyPromo: (code: string) => { ok: boolean; message: string }
+  applyPromo: (code: string) => Promise<{ ok: boolean; message: string }>
   removePromo: () => void
   openDrawer: () => void
   closeDrawer: () => void
@@ -68,7 +68,8 @@ const Ctx = createContext<CartCtx | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [raw, setRaw] = useState<CartLine[]>(() => read<CartLine[]>(LS_CART, []))
-  const [promo, setPromo] = useState<string | null>(() => read<string | null>(LS_PROMO, null))
+  const { byId } = useCatalog()
+  const [promo, setPromo] = useState<PromoInfo | null>(() => read<PromoInfo | null>(LS_PROMO, null))
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [lastAdded, setLastAdded] = useState<string | null>(null)
 
@@ -78,7 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const on = (e: StorageEvent) => {
       if (e.key === LS_CART) setRaw(read<CartLine[]>(LS_CART, []))
-      if (e.key === LS_PROMO) setPromo(read<string | null>(LS_PROMO, null))
+      if (e.key === LS_PROMO) setPromo(read<PromoInfo | null>(LS_PROMO, null))
     }
     window.addEventListener('storage', on)
     return () => window.removeEventListener('storage', on)
@@ -87,16 +88,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const lines = useMemo(
     () =>
       raw.flatMap((l) => {
-        const product = products.find((p) => p.id === l.productId)
+        const product = byId(l.productId)
         if (!product) return []
         const unit = unitPrice(product, l.options)
         return [{ ...l, product, unit, total: unit * l.qty }]
       }),
-    [raw],
+    [raw, byId],
   )
   const count = lines.reduce((s, l) => s + l.qty, 0)
   const subtotal = lines.reduce((s, l) => s + l.total, 0)
-  const pct = promo ? PROMOS[promo]?.percent ?? 0 : 0
+  const pct = promo?.percentOff ?? 0
   const discount = Math.round(subtotal * pct) / 100
 
   const add = useCallback((productId: string, options: Record<string, string>, qty = 1) => {
@@ -115,12 +116,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setQty: (key, qty) => setRaw((prev) => (qty <= 0 ? prev.filter((l) => l.key !== key) : prev.map((l) => (l.key === key ? { ...l, qty: Math.min(99, qty) } : l)))),
     remove: (key) => setRaw((prev) => prev.filter((l) => l.key !== key)),
     clear: () => { setRaw([]); setPromo(null) },
-    applyPromo: (code) => {
+    applyPromo: async (code) => {
       const c = code.trim().toUpperCase()
       if (!c) return { ok: false, message: 'Enter a code.' }
-      if (!PROMOS[c]) return { ok: false, message: `“${c}” isn’t a valid code. Try DEMO10.` }
-      setPromo(c)
-      return { ok: true, message: `${c} applied: ${PROMOS[c].label}.` }
+      try {
+        const r = await validatePromo(c) // validated against the promo_codes table
+        if (!r.valid) return { ok: false, message: r.message }
+        setPromo({ code: r.code, label: r.label, percentOff: r.percentOff, freeShipping: r.freeShipping })
+        return { ok: true, message: `${r.code} applied: ${r.label}.` }
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message : 'Could not check that code.' }
+      }
     },
     removePromo: () => setPromo(null),
     openDrawer: () => setDrawerOpen(true),

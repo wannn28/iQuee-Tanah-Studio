@@ -1,19 +1,33 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Img from '../components/Img'
 import { CheckIcon } from '../components/Icons'
 import { money } from '../lib/format'
-import { loadOrders } from '../lib/order'
+import { getOrder, loadOrderTokens, type PlacedOrder } from '../lib/api'
+import { Spinner } from '../components/Status'
 import useTitle from '../lib/useTitle'
 
 export default function Confirmation() {
   const { orderNo = '' } = useParams()
-  const o = loadOrders()[orderNo]
-  useTitle(o ? `Order ${o.number} confirmed` : 'Order not found')
+  const [o, setO] = useState<PlacedOrder | null>(null)
+  const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading')
+  const [err, setErr] = useState('')
+  useEffect(() => {
+    const token = loadOrderTokens()[orderNo]
+    if (!token) { setState('missing'); return }
+    let alive = true
+    getOrder(orderNo, token)
+      .then((r) => { if (alive) { setO(r); setState('ready') } })
+      .catch((e: Error) => { if (alive) { setErr(e.message); setState('missing') } })
+    return () => { alive = false }
+  }, [orderNo])
+  useTitle(o ? `Order ${o.number} confirmed` : state === 'loading' ? 'Loading order…' : 'Order not found')
+  if (state === 'loading') return <Spinner label="Loading your order…" />
   if (!o) {
     return (
       <div className="wrap py-24 text-center">
         <h1 className="text-4xl">We couldn’t find order {orderNo}</h1>
-        <p className="mt-3 text-stone">Demo orders are stored only in the browser that placed them.</p>
+        <p className="mt-3 text-stone">{err && err !== 'Order not found' ? err : 'Order confirmations can only be opened from the browser that placed the order.'}</p>
         <Link to="/shop" className="btn-primary mt-8">Back to the shop</Link>
       </div>
     )
@@ -27,7 +41,7 @@ export default function Confirmation() {
         <h1 className="mt-3 text-4xl sm:text-5xl">Thank you, <em className="text-clay">{o.name.split(' ')[0]}</em>.</h1>
         <p className="mt-4 text-stone">Your order number is</p>
         <p className="mt-1 font-serif text-3xl tracking-wide" data-testid="order-number">{o.number}</p>
-        <p className="mx-auto mt-4 max-w-lg text-sm text-stone">A confirmation would normally be sent to <strong className="text-ink">{o.email}</strong>. This is a demo store by <a href="https://iquee.tech" className="link-u" target="_blank" rel="noopener">iQuee</a>, so no email is sent, nothing is charged and nothing will ship.</p>
+        <p className="mx-auto mt-4 max-w-lg text-sm text-stone">A confirmation would normally be sent to <strong className="text-ink">{o.email}</strong>. This is a demo store by <a href="https://iquee.tech" className="link-u" target="_blank" rel="noopener">iQuee</a>, so no email is sent, nothing is charged and nothing will ship. The order itself is real data: it was priced and saved by the store API in PostgreSQL.</p>
       </div>
 
       <div className="mt-12 grid gap-8 border-t border-ink/15 pt-10 md:grid-cols-5">
